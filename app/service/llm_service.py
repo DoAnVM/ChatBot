@@ -13,7 +13,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 load_dotenv()
 
 # System prompt cho chatbot khách sạn
-SYSTEM_PROMPT = """Bạn là trợ lý tư vấn khách sạn thân thiện và chuyên nghiệp của hệ thống HustStay.
+SYSTEM_PROMPT = """Bạn là trợ lý tư vấn khách sạn thân thiện và chuyên nghiệp của hệ thống TravelStay.
 Nhiệm vụ của bạn là giúp khách hàng tìm kiếm và tư vấn về các cơ sở lưu trú, phòng nghỉ phù hợp.
 
 QUY TẮC QUAN TRỌNG:
