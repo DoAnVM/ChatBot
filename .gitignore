@@ -1,0 +1,45 @@
+# ==============================
+# SECRETS - KHÔNG BAO GIỜ PUSH
+# ==============================
+.env
+*.env
+.env.*
+!.env.example
+
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ==============================
+# Vector DB (dữ liệu lớn - build lại khi deploy)
+# ==============================
+app/data/chroma_db/
+data/
+
+# ==============================
+# IDE
+# ==============================
+.idea/
+.vscode/
+*.iml
+
+# ==============================
+# OS
+# ==============================
+.DS_Store
+Thumbs.db
+desktop.ini
