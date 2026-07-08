@@ -2,7 +2,6 @@ import os
 import re
 import hashlib
 from dotenv import load_dotenv
-from functools import lru_cache
 from typing import Generator
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
@@ -12,8 +11,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 load_dotenv()
 
-# System prompt cho chatbot khách sạn
-SYSTEM_PROMPT = """Bạn là trợ lý tư vấn khách sạn thân thiện và chuyên nghiệp của hệ thống TravelStay.
+SYSTEM_PROMPT = """Bạn là trợ lý tư vấn khách sạn thân thiện và chuyên nghiệp của hệ thống HustStay.
 Nhiệm vụ của bạn là giúp khách hàng tìm kiếm và tư vấn về các cơ sở lưu trú, phòng nghỉ phù hợp.
 
 QUY TẮC QUAN TRỌNG:
@@ -37,7 +35,6 @@ THÔNG TIN NGỮ CẢNH (kết quả tìm kiếm từ cơ sở dữ liệu):
 Hãy trả lời bằng tiếng Việt, thân thiện, tự nhiên và hữu ích."""
 
 # Cache context tìm kiếm: tránh gọi ChromaDB + Gemini Embedding nhiều lần
-# cho cùng một câu hỏi (maxsize=128 query gần nhất)
 _context_cache: dict = {}
 _MAX_CACHE = 128
 
@@ -113,28 +110,6 @@ class ChatbotService:
             messages.append(HumanMessage(content=turn["human"]))
             messages.append(AIMessage(content=turn["ai"]))
         return messages
-
-    # ------------------------------------------------------------------
-    # Non-streaming: dùng cho các client không hỗ trợ SSE
-    # ------------------------------------------------------------------
-    def chat(self, user_message: str, chat_history: list) -> str:
-        context = self._retrieve_context(user_message)
-        print(f"\n[DEBUG] User: {user_message}")
-        print(f"[DEBUG] Context ({len(context)} chars):\n{context[:300]}...\n")
-
-        response = self.chain.invoke({
-            "context": context,
-            "history": self._build_history(chat_history),
-            "question": user_message
-        })
-
-        content = response.content
-        if isinstance(content, list):
-            content = "".join(
-                part["text"] for part in content
-                if isinstance(part, dict) and part.get("type") == "text"
-            )
-        return _clean_markdown(content)
 
     # ------------------------------------------------------------------
     # Streaming: trả về từng chunk ngay khi Gemini sinh ra
