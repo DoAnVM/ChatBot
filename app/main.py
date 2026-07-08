@@ -3,7 +3,6 @@ import asyncio
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from app.service.llm_service import ChatbotService
 import uvicorn
@@ -37,56 +36,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str = "default_user"
 
-class ChatResponse(BaseModel):
-    reply: str
-    session_id: str
 
-
-# ----------------------------------------------------------------
-# POST /api/v1/chat  ← Non-streaming, tương thích với frontend cũ
-# ----------------------------------------------------------------
-@app.post("/api/v1/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """
-    Xử lý đồng thời nhiều request: chatbot.chat() là blocking sync,
-    được đẩy vào thread pool để không block event loop.
-    Mỗi request chạy trong thread riêng biệt → nhiều user cùng lúc OK.
-    """
-    lock = _get_session_lock(request.session_id)
-
-    try:
-        async with lock:
-            history = session_histories.setdefault(request.session_id, [])
-            # ⚡ run_in_threadpool: chạy hàm sync trong thread pool
-            # → Event loop FREE để nhận request khác trong lúc chờ Gemini
-            history_snapshot = list(history)  # copy để thread an toàn
-
-        # Chạy blocking call NGOÀI lock (không block session khác)
-        reply = await run_in_threadpool(
-            chatbot.chat,
-            request.message,
-            history_snapshot
-        )
-
-        async with lock:
-            history = session_histories.setdefault(request.session_id, [])
-            history.append({"human": request.message, "ai": reply})
-            if len(history) > 5:
-                history.pop(0)
-
-        return ChatResponse(reply=reply, session_id=request.session_id)
-
-    except Exception as e:
-        error_msg = str(e)
-        print(f"--- LOG ERROR ---: {error_msg}")
-        if "429" in error_msg or "RESOURCE_EXHAUSTED" in error_msg:
-            raise HTTPException(status_code=429, detail="Hệ thống đang bận, vui lòng thử lại sau vài giây.")
-        raise HTTPException(status_code=500, detail=f"Bot error: {error_msg}")
-
-
-# ----------------------------------------------------------------
-# POST /api/v1/chat/stream  ← Streaming SSE
-# ----------------------------------------------------------------
 @app.post("/api/v1/chat/stream")
 async def chat_stream(request: ChatRequest):
     """
